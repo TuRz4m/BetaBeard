@@ -5,12 +5,13 @@ Created on 29 nov. 2013
 '''
 # -*- coding: utf-8 -*-
 
-import urlparse
-import urllib2
+from distutils.tests.setuptools_build_ext import if_dl
 import json
 import logging
 import urllib
-from distutils.tests.setuptools_build_ext import if_dl
+import urllib2
+import urlparse
+
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +70,8 @@ class APIBuilder:
         logger.debug("APIBuilder::call(%s,%s)", method, param)
         source = self.getResponse(self.getUrl(method, param))
         json_data = json.loads(source)
-        logger.debug("APIBuilder::call(%s,%s) : %s", json_data['root'])
-        return json_data['root']
+        logger.debug("APIBuilder::call(%s,%s) : %s", method, param, json_data)
+        return json_data
 
 
 class BetaSerieAPI:

@@ -7,5 +7,6 @@ __copyright__ = 'Copyright 2013 TuRz4m'
 
 import logging
 
+
 logging.getLogger(__name__).addHandler(logging.StreamHandler())
 logging.getLogger(__name__).setLevel(logging.DEBUG)

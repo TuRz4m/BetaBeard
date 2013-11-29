@@ -6,7 +6,9 @@ Created on 29 nov. 2013
 # -*- coding: utf-8 -*-
 
 from unittest import TestCase, TestSuite, TestLoader, TextTestRunner
-from betabeard import BetaBeard
+
+import BetaBeard
+
 
 class BuilderTestCase(TestCase):
 
@@ -37,7 +39,7 @@ class BuilderTestCase(TestCase):
     def test_call(self):
         method = "/members/search"
         params= "login=TuRz4m"
-        self.assertEquals(self.builder.call(method, params)['users']['login'], "TuRz4m")
+        self.assertEquals(self.builder.call(method, params)['users'][0]['login'], "TuRz4m")
 
     def suite(self):
         suite = TestSuite()
