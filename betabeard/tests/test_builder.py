@@ -7,8 +7,10 @@ Created on 29 nov. 2013
 
 from unittest import TestCase, TestSuite, TestLoader, TextTestRunner
 
-import BetaBeard
-
+from api.APIUtils import APIBuilder
+import logging
+logging.getLogger(__name__).addHandler(logging.StreamHandler())
+logging.getLogger(__name__).setLevel(logging.DEBUG)
 
 class BuilderTestCase(TestCase):
 
@@ -17,7 +19,7 @@ class BuilderTestCase(TestCase):
         scheme = "http"
         headers = [[('User-agent', "BetaBeard")], [('X-BetaSeries-Version', '2.2')]]
         params = "key=cff7db294f72";
-        self.builder = BetaBeard.APIBuilder(url, scheme, headers, params)
+        self.builder = APIBuilder(url, scheme, headers, params)
 
         self.assertEqual(self.builder.urlRoot, url)
         self.assertEqual(self.builder.scheme, scheme)
@@ -40,6 +42,12 @@ class BuilderTestCase(TestCase):
         method = "/members/search"
         params= "login=TuRz4m"
         self.assertEquals(self.builder.call(method, params)['users'][0]['login'], "TuRz4m")
+
+    def test_post(self):
+        method = "/members/auth"
+        params= "login=Dev47&password=5e8edd851d2fdfbd7415232c67367cc3"
+        self.builder.scheme = "https"
+        self.assertEquals(self.builder.post(method, params), "TuRz4m")
 
     def suite(self):
         suite = TestSuite()
