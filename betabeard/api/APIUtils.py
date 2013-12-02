@@ -147,11 +147,25 @@ class BetaSerieAPI:
         params = [('id', show_id)]
         tvshow = self.builder.call("/shows/display" , params)
         if (tvshow == None or len(tvshow['errors']) > 0):
+            logger.debug("BetaSerieAPI::shows_tvdbid(%s) :  Show unknow", show_id)
             return -1
         else:
             logger.debug("BetaSerieAPI::shows_tvdbid(%s) : %s", show_id, tvshow['show']['thetvdb_id'])
             return tvshow['show']['thetvdb_id']
 
+
+    """
+    Add a show to the current user.
+    """
+    def add_show(self, show_id):
+        params = [('id', show_id)]
+        tvshow = self.builder.call("/shows/show" , params, True)
+        if (tvshow == None or len(tvshow['errors']) > 0):
+            logger.debug("BetaSerieAPI::shows_tvdbid(%s) :  Error when adding the show.", show_id)
+            return False
+        else:
+            logger.debug("BetaSerieAPI::add_show(%s) : %s", show_id, tvshow)
+            return True
 
     """
     Return the list of all the show (thetvdb_id) for the user.
@@ -162,11 +176,71 @@ class BetaSerieAPI:
         if (memberinfo != None):
             activeShows = []
             for show in memberinfo['member']['shows']:
-                if show['status'] == 'continuing' & show['user']['archived'] == 'false':
+                logger.debug("BetaSerieAPI::show_list() :  Show(%s) : %s", show['id'], show['title'])
+                if show['status'] != 'Ended' and show['user']['archived'] == False:
                     activeShows.append(show['thetvdb_id'])
+                    logger.debug("BetaSerieAPI::show_list() :  Show(%s) : %s Added.", show['id'], show['title'])
             return activeShows
         else:
             return []
+
+
+    """
+    Return the 100 first (or since) events on the timeline.
+    """
+    def timeline(self, nb = 100, idUser=None, since = None):
+        if (idUser == None):
+            idUser = self.idUser
+
+        params = [('id', idUser), ('nbpp', nb)]
+        if (since != None):
+            params.append(('since_id', since))
+
+        timeline = self.builder.call("/timeline/member" , params)
+        if (timeline == None or len(timeline['errors']) > 0):
+            logger.debug("BetaSerieAPI::timeline(%s,%s,%s) :  Error when requesting timeling.", idUser, nb, since)
+            return None
+        else:
+            logger.debug("BetaSerieAPI::timeline(%s,%s,%s) :  OK : %s", idUser, nb, since, timeline)
+            return timeline['events']
+
+    """
+    Return all the events since the "since_id".
+    We do it here, because the 'since_id' is funny...
+    return last_id,events
+    """
+    def timeline_since(self,  since, idUser=None):
+        timeline = self.timeline(nb=100, idUser=idUser)
+
+        if (timeline == None or len(timeline) == 0):
+            return since, None
+
+        last_id = timeline[0]['id'];
+        events = []
+
+        while timeline != None and len(timeline) != 0:
+            for event in timeline:
+                if (event['id'] <= since):
+                    # we reverse because like this, it's in chronological order.
+                    events.reverse()
+                    return last_id, events;
+                events.append(event);
+            timeline = self.timeline(nb=100, since=events[len(events)-1]['id'], idUser=idUser)
+
+
+        events.reverse()
+        return last_id, events.reverse()
+
+    """
+    Return all the events for show update (add/del/archive/unarchive).
+    """
+    def timeline_updateShow_since(self, since, idUser=None):
+        last_id, events = self.timeline_since(since, idUser);
+        maj = []
+        for event in events:
+            if (event['type'] == 'add_serie' or event['type'] == 'del_serie' or event['type'] == 'unarchive' or event['type'] == 'archive'):
+                maj.append(event);
+        return last_id, event;
 
     """
     Delete token in BetaSerie.
