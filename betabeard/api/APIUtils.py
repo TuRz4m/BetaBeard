@@ -20,20 +20,39 @@ class APIBuilder:
     url : root of api.
     scheme : HTTP or https
     headers : HTTP Headers.
-    params : Parameters for all message (like apikey).
+    params : Parameters for all message (like apikey). (In form of dictionnary).
     """
     def __init__(self,
                  urlRoot,
-                 scheme="http",
+                 scheme="https",
                  headers=None,
                  params=None):
         self.urlRoot = urlRoot
         self.scheme = scheme
         self.headers = headers
         self.params = params
+        # Init the container.
+        if (self.params == None):
+            self.params = []
         logger.debug("APIBuilder::__init__(urlRoot=%s,scheme=%s,headers=%s,params=%s)", urlRoot, scheme, headers, params)
 
 
+    """
+    Return all the param in form of string encoded. (param + param in obj).
+    """
+    def getParams(self, params=None):
+        allParams = []
+        logger.debug("APIBuilder::getParams(%s) [%s]", params, self.params)
+        if (self.params != None):
+            for p in self.params:
+                allParams.append(p);
+        if (params != None):
+            for p in params:
+                allParams.append(p);
+
+        paramsEncoded = urllib.urlencode(allParams)
+        logger.debug("APIBuilder::getParams(%s) => %s", params, paramsEncoded)
+        return paramsEncoded
 
     """
     get the url for the api with the method & param.
@@ -41,58 +60,47 @@ class APIBuilder:
     params : param to add to the request (like key=truc)
     """
     def getUrl(self, method, params=None):
-        query = ""
-        if (params != None):
-            if (self.params != None):
-                query = '%s&%s' % (self.params, params)
-            else:
-                query = params
-        else:
-            query = self.params
-
         url = urlparse.urlunparse((self.scheme, self.urlRoot, method,
-                                    None, query, None))
+                                    None, self.getParams(params) , None))
         logger.debug("APIBuilder::getUrl(%s,%s) : %s", method, params, url)
         return url
 
     """
-    Call an url an retrieve the answer.
-    url : Url to call.
-    """
-    def getResponse(self, url):
-        opener = urllib2.build_opener()
-        for header in self.headers:
-            logger.debug("APIBuilder::getResponse(%s) : %s", url, header)
-            opener.addheaders = header
-        source = opener.open(url)
-        logger.debug("APIBuilder::getResponse(%s) : Open connection", url)
-        return source.read()
-
-    """
     Call a method on the API and get the response in form of python dictionnary.
     method : method called (like /members/infos)
-    params : param to add to the request (like key=truc)
+    params : param to add to the request (in a dictionnary).
+    post : if it's a post request.
     """
-    def call(self, method, param=None):
-        logger.debug("APIBuilder::call(%s,%s)", method, param)
-        source = self.getResponse(self.getUrl(method, param))
-        json_data = json.loads(source)
-        logger.debug("APIBuilder::call(%s,%s) : %s", method, param, json_data)
-        return json_data
+    def call(self, method, params=None, post=False):
+        logger.debug("APIBuilder::call(%s,%s, %s)", method, params, post)
+        opener = urllib2.build_opener()
+        logger.debug("APIBuilder::call(%s,%s, %s) : Add Headers %s", method, params, post, self.headers)
+        opener.addheaders = self.headers
 
-    """
-    Call a method in POST.
-    """
-    def post(self, method, param=None):
+        url = ""
+        source = None
         try:
-            url = urlparse.urlunparse((self.scheme, self.urlRoot, method,
-                                        None, None, None))
-            req = urllib2.Request(url, param);
-            response = urllib2.urlopen(req)
-            json_data = json.loads(response)
+            # If Post : New header + data in content.
+            if post:
+                opener.addheaders.append(('Content-Type', "application/x-www-form-urlencoded "))
+                url = self.getUrl(method)
+                source = opener.open(url, self.getParams(params))
+            # if Get : we put the params in url.
+            else:
+                url = self.getUrl(method, params)
+                source = opener.open(url)
+
+            logger.debug("APIBuilder::call(%s) : Open connection (Post=%s)", url, post)
+            json_data = json.loads(source.read())
+            logger.debug("APIBuilder::call(%s,%s;%s) : %s", method, params, post, json_data)
             return json_data
-        except  urllib2.HTTPError as error:
-            logger.error("Error HTTP : %s", error.reason)
+        except urllib2.HTTPError as e:
+            logger.error("APIBuilder::call(%s) : Error : %s (%s)", url, e.code, e.read())
+            return None
+
+
+
+
 
 
 
@@ -122,7 +130,6 @@ class BetaSerieAPI:
         # need to be in HTTPS during this request only.
         self.builder.scheme = "https"
         token = self.builder.call("/members/auth", params)
-        self.builder.scheme = "http"
         print token
 
     """
