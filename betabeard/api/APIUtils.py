@@ -82,7 +82,10 @@ class APIBuilder:
         try:
             # If Post : New header + data in content.
             if post:
-                opener.addheaders.append(('Content-Type', "application/x-www-form-urlencoded "))
+                if (opener.addheaders != None):
+                    opener.addheaders.append(('Content-Type', "application/x-www-form-urlencoded "))
+                else:
+                    opener.addheaders = [('Content-Type', "application/x-www-form-urlencoded ")]
                 url = self.getUrl(method)
                 source = opener.open(url, self.getParams(params))
             # if Get : we put the params in url.
@@ -111,34 +114,39 @@ class BetaSerieAPI:
                   password,
                   key="cff7db294f72",
                   user_agent="BetaBeard"):
-        headers = [[('User-agent', user_agent)],
-                       [('X-BetaSeries-Version', '2.2')],
-                       [('X-BetaSeries-Key', key)]]
-        self.builder = APIBuilder("api.betaseries.com", "http", headers)
+        headers = [('User-agent', user_agent),
+                       ('X-BetaSeries-Version', '2.2'),
+                       ('X-BetaSeries-Key', key)]
+        self.builder = APIBuilder("api.betaseries.com", "https", headers)
         self.login = login;
         self.auth(login, password)
-        self.builder.headers.append([('X-BetaSeries-Token', "xx")])
-        logger.debug("BetaSerieAPI::__init__(%s,%s)", key, user_agent)
+        self.builder.headers.append(('X-BetaSeries-Token', self.token))
+        logger.debug("BetaSerieAPI::__init__(%s,%s)", key, login)
 
 
     """
-    Auth a user and return the token.
+    Auth a user and set the token.
     """
     def auth(self, login, password):
         hash_pass = hashlib.md5(password).hexdigest()
-        params = urllib.urlencode({'login': login, 'password': hash_pass})
-        # need to be in HTTPS during this request only.
-        self.builder.scheme = "https"
-        token = self.builder.call("/members/auth", params)
-        print token
+        logger.debug("BetaSerieAPI::auth(%s,%s) : Try auth...", login, hash_pass)
+        params = [('login', login), ('password', hash_pass)]
+        userAuth = self.builder.call("/members/auth", params, True)
+        if (userAuth != None):
+            self.idUser = userAuth['user']['id']
+            self.token = userAuth['token']
+            logger.debug("BetaSerieAPI::auth(%s,%s) : Successfull.", login, hash_pass)
+        else:
+            logger.error("BetaSerieAPI::auth(%s,%s) : Fail.", login, hash_pass)
+            raise Exception("Can't auth user", login)
 
     """
     Return the tvdbid of a show.
     """
     def shows_tvdbid(self, show_id):
-        params = urllib.urlencode({'id': show_id})
+        params = [('id', show_id)]
         tvshow = self.builder.call("/shows/display" , params)
-        if (len(tvshow['errors']) > 0):
+        if (tvshow == None or len(tvshow['errors']) > 0):
             return -1
         else:
             logger.debug("BetaSerieAPI::shows_tvdbid(%s) : %s", show_id, tvshow['show']['thetvdb_id'])
@@ -146,27 +154,24 @@ class BetaSerieAPI:
 
 
     """
-    Return the id of a member named 'login'
+    Return the list of all the show (thetvdb_id) for the user.
     """
-    def members_id(self, login):
-        params = urllib.urlencode({'login': login})
-        member = self.builder.call("/members/search", params)
-        if (len(member['users']) > 0):
-            logger.debug("BetaSerieAPI::members_id(%s) : %s", login, member['users'][0]['id'])
-            return member['users'][0]['id']
-        else:
-            logger.debug("BetaSerieAPI::members_id(%s) : User not found.", login)
-            return -1
-    """
-    Return the list of all the show (thetvdb_id) for the user [user_id].
-    """
-    def show_list(self, user_id):
-        params = urllib.urlencode({'id': user_id})
+    def show_list(self):
+        params = [('id', self.idUser)]
         memberinfo = self.builder.call("/members/infos", params)
-        activeShows = []
-        for show in memberinfo['member']['shows']:
-            if show['status'] == 'continuing' & show['user']['archived'] == 'false':
-                activeShows.append(show['thetvdb_id'])
-        return activeShows
+        if (memberinfo != None):
+            activeShows = []
+            for show in memberinfo['member']['shows']:
+                if show['status'] == 'continuing' & show['user']['archived'] == 'false':
+                    activeShows.append(show['thetvdb_id'])
+            return activeShows
+        else:
+            return []
+
+    """
+    Delete token in BetaSerie.
+    """
+    def __del__(self):
+        self.builder.call("/members/destroy", None, True)
 
 
