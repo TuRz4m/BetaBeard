@@ -98,8 +98,9 @@ class APIBuilder:
             logger.debug("APIBuilder::call(%s,%s;%s) : %s", method, params, post, json_data)
             return json_data
         except urllib2.HTTPError as e:
-            logger.error("APIBuilder::call(%s) : Error : %s (%s)", url, e.code, e.read())
-            return None
+            error = e.read()
+            logger.error("APIBuilder::call(%s) : Error : %s (%s)", url, e.code, error)
+            return json.loads(error)
 
 
 
@@ -132,13 +133,13 @@ class BetaSerieAPI:
         logger.debug("BetaSerieAPI::auth(%s,%s) : Try auth...", login, hash_pass)
         params = [('login', login), ('password', hash_pass)]
         userAuth = self.builder.call("/members/auth", params, True)
-        if (userAuth != None):
+        if (len(userAuth['errors']) == 0):
             self.idUser = userAuth['user']['id']
             self.token = userAuth['token']
             logger.debug("BetaSerieAPI::auth(%s,%s) : Successfull.", login, hash_pass)
         else:
             logger.error("BetaSerieAPI::auth(%s,%s) : Fail.", login, hash_pass)
-            raise Exception("Can't auth user", login)
+            raise BadLoginException(userAuth['errors'][0])
 
     """
     Return the tvdbid of a show.
@@ -146,8 +147,8 @@ class BetaSerieAPI:
     def shows_tvdbid(self, show_id):
         params = [('id', show_id)]
         tvshow = self.builder.call("/shows/display" , params)
-        if (tvshow == None or len(tvshow['errors']) > 0):
-            logger.debug("BetaSerieAPI::shows_tvdbid(%s) :  Show unknow", show_id)
+        if (len(tvshow['errors']) > 0):
+            logger.debug("BetaSerieAPI::shows_tvdbid(%s) :  Show unknown (%s)", show_id, tvshow['errors'][0]['text'])
             return -1
         else:
             logger.debug("BetaSerieAPI::shows_tvdbid(%s) : %s", show_id, tvshow['show']['thetvdb_id'])
@@ -160,8 +161,8 @@ class BetaSerieAPI:
     def add_show(self, show_id):
         params = [('id', show_id)]
         tvshow = self.builder.call("/shows/show" , params, True)
-        if (tvshow == None or len(tvshow['errors']) > 0):
-            logger.debug("BetaSerieAPI::shows_tvdbid(%s) :  Error when adding the show.", show_id)
+        if (len(tvshow['errors']) > 0):
+            logger.debug("BetaSerieAPI::shows_tvdbid(%s) :  Error when adding the show. (%s)", show_id, tvshow['errors'][0]['text'])
             return False
         else:
             logger.debug("BetaSerieAPI::add_show(%s) : %s", show_id, tvshow)
@@ -173,7 +174,7 @@ class BetaSerieAPI:
     def show_list(self):
         params = [('id', self.idUser)]
         memberinfo = self.builder.call("/members/infos", params)
-        if (memberinfo != None):
+        if (len(memberinfo['errors']) == 0):
             activeShows = []
             for show in memberinfo['member']['shows']:
                 logger.debug("BetaSerieAPI::show_list() :  Show(%s) : %s", show['id'], show['title'])
@@ -197,8 +198,8 @@ class BetaSerieAPI:
             params.append(('since_id', since))
 
         timeline = self.builder.call("/timeline/member" , params)
-        if (timeline == None or len(timeline['errors']) > 0):
-            logger.debug("BetaSerieAPI::timeline(%s,%s,%s) :  Error when requesting timeling.", idUser, nb, since)
+        if (len(timeline['errors']) > 0):
+            logger.debug("BetaSerieAPI::timeline(%s,%s,%s) :  Error when requesting timeling. (%s)", idUser, nb, since,  timeline['show']['thetvdb_id'])
             return None
         else:
             logger.debug("BetaSerieAPI::timeline(%s,%s,%s) :  OK : %s", idUser, nb, since, timeline)
@@ -248,4 +249,10 @@ class BetaSerieAPI:
     def __del__(self):
         self.builder.call("/members/destroy", None, True)
 
+
+class BadLoginException(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
 

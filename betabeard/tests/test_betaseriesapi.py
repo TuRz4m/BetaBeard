@@ -7,7 +7,7 @@ Created on 29 nov. 2013
 
 from unittest import TestCase, TestSuite, TestLoader, TextTestRunner
 
-from api.APIUtils import BetaSerieAPI
+from api.APIUtils import BetaSerieAPI, BadLoginException
 
 
 class BetaSerieAPITestCase(TestCase):
@@ -21,6 +21,12 @@ class BetaSerieAPITestCase(TestCase):
         self.assertIsNotNone(self.betaserieAPI.token)
         self.assertIsNotNone(self.betaserieAPI.idUser)
         self.betaserieAPI.add_show(self.idShow)
+
+    def test_bad_login(self):
+        with self.assertRaises(BadLoginException):
+            BetaSerieAPI("Dev047", "TESTBADLOGIN")
+        with self.assertRaises(BadLoginException):
+            BetaSerieAPI("LOGIN_INEXISTANT", "TESTBADLOGIN")
 
     def test_shows_tvdbid(self):
         thetvdb_id = 0
