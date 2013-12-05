@@ -101,6 +101,9 @@ class APIBuilder:
             error = e.read()
             logger.error("APIBuilder::call(%s) : Error : %s (%s)", url, e.code, error)
             return json.loads(error)
+        except urllib2.URLError as ex:
+            logger.error("APIBuilder::call(%s) : Error : %s ", url, ex)
+            return None
 
 
 
@@ -110,7 +113,7 @@ class APIBuilder:
 
 
 class BetaSerieAPI:
-    def __init__( self,
+    def __init__(self,
                   login,
                   password,
                   key="cff7db294f72",
@@ -189,7 +192,7 @@ class BetaSerieAPI:
     """
     Return the 100 first (or since) events on the timeline.
     """
-    def timeline(self, nb = 100, idUser=None, since = None):
+    def timeline(self, nb=100, idUser=None, since=None):
         if (idUser == None):
             idUser = self.idUser
 
@@ -199,7 +202,7 @@ class BetaSerieAPI:
 
         timeline = self.builder.call("/timeline/member" , params)
         if (len(timeline['errors']) > 0):
-            logger.debug("BetaSerieAPI::timeline(%s,%s,%s) :  Error when requesting timeling. (%s)", idUser, nb, since,  timeline['show']['thetvdb_id'])
+            logger.debug("BetaSerieAPI::timeline(%s,%s,%s) :  Error when requesting timeling. (%s)", idUser, nb, since, timeline['show']['thetvdb_id'])
             return None
         else:
             logger.debug("BetaSerieAPI::timeline(%s,%s,%s) :  OK : %s", idUser, nb, since, timeline)
@@ -210,7 +213,7 @@ class BetaSerieAPI:
     We do it here, because the 'since_id' is funny...
     return last_id,events
     """
-    def timeline_since(self,  since, idUser=None):
+    def timeline_since(self, since, idUser=None):
         timeline = self.timeline(nb=100, idUser=idUser)
 
         if (timeline == None or len(timeline) == 0):
@@ -226,7 +229,7 @@ class BetaSerieAPI:
                     events.reverse()
                     return last_id, events;
                 events.append(event);
-            timeline = self.timeline(nb=100, since=events[len(events)-1]['id'], idUser=idUser)
+            timeline = self.timeline(nb=100, since=events[len(events) - 1]['id'], idUser=idUser)
 
 
         events.reverse()
@@ -256,3 +259,95 @@ class BadLoginException(Exception):
     def __str__(self):
         return repr(self.value)
 
+
+
+"""
+SickBeard API.
+We need to configure this one.
+url: url of the sickbeard (like localhost:8081)
+scheme : http/https
+key: apikey of sickbeard
+user_agent: User agent for request.
+"""
+class SickBeardAPI:
+    def __init__(self,
+                  url,
+                  scheme="https",
+                  key="cff7db294f72",
+                  user_agent="BetaBeard"):
+        headers = [('User-agent', user_agent)]
+        self.builder = APIBuilder(url + "/api/" + key, scheme, headers)
+        logger.debug("SickBeardAPI::__init__(%s,%s,%s,%s)", url, scheme, key, user_agent)
+
+    """
+    Add a show on sickbeard.
+    tvdbid unique show id
+    location path to existing folder to store show
+    lang two letter tvdb language, en = english
+    flatten_folders 0 - use season folders if part of rename string  1 - do not use season folders
+    status wanted, skipped, archived, ignored
+    initial multiple types can be passed when delimited by | : sdtv, sddvd, hdtv, rawhdtv, fullhdtv, hdwebdl, fullhdwebdl, hdbluray, fullhdbluray, unknown
+    archive multiple types can be passed when delimited by | : sddvd, hdtv, rawhdtv, fullhdtv, hdwebdl, fullhdwebdl, hdbluray, fullhdbluray
+    """
+    def add_show(self, tvdbid, location=None, lang=None, flatten_folders=None, status=None, initial=None, archive=None):
+        params = [('cmd', 'show.addnew'),
+                   ('tvdbid', tvdbid)]
+        if (location != None):
+            params.append([('location', location)])
+        if (lang != None):
+            params.append([('lang', lang)])
+        if (flatten_folders != None):
+            params.append([('flatten_folders', flatten_folders)])
+        if (status != None):
+            params.append([('status', status)])
+        if (initial != None):
+            params.append([('initial', initial)])
+        if (archive != None):
+            params.append([('archive', archive)])
+        data = self.builder.call("/" , params)
+        logger.debug("SickBeardAPI::add_show(%s,%s,%s,%s,%s,%s,%s) : %s", tvdbid, location, lang, flatten_folders, status, initial, archive, data)
+
+        if (data != None  and data['result'] == 'success'):
+            return True
+        elif (data != None):
+            logger.error("SickBeard : Can't add show %s. (%s)", tvdbid, data['message'])
+        else:
+            logger.error("SickBeard : Can't add show %s.", tvdbid)
+
+        return False
+
+    """
+    Delete the show on SickBeard.
+    tvdbid = Id on thetvdb.
+    """
+    def del_show(self, tvdbid):
+        params = [('cmd', 'show.remove'),
+                   ('tvdbid', tvdbid)]
+        data = self.builder.call("/" , params)
+        logger.debug("SickBeardAPI::del_show(%s) : %s", tvdbid, data)
+
+        if (data != None  and data['result'] == 'success'):
+            return True
+        elif (data != None):
+            logger.error("SickBeard : Can't delete show %s. (%s)", tvdbid, data['message'])
+        else:
+            logger.error("SickBeard : Can't delete show %s.", tvdbid)
+
+    """
+    Pause the show on SickBeard.
+    tvdbid = Id on thetvdb.
+    pause = 0: Not paused, 1: paused.
+    """
+    def pause_show(self, tvdbid, pause):
+        params = [('cmd', 'show.remove'),
+                   ('tvdbid', tvdbid)
+                   ('pause', pause)]
+        data = self.builder.call("/" , params)
+        logger.debug("SickBeardAPI::pause_show(%s, %s) : %s", tvdbid, pause, data)
+
+        if (data != None  and data['result'] == 'success'):
+            return True
+        elif (data != None):
+            logger.error("SickBeard : Can't pause/unpause show %s. (%s)", tvdbid, data['message'])
+        else:
+            logger.error("SickBeard : Can't pause/unpause show %s.", tvdbid)
