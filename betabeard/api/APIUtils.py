@@ -225,6 +225,8 @@ class BetaSerieAPI:
         if (since == None):
             return last_id, []
 
+        since = int(since)
+
         while timeline != None and len(timeline) != 0:
             for event in timeline:
                 if (event['id'] <= since):

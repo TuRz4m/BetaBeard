@@ -11,14 +11,16 @@ import os.path
 
 
 logger = logging.getLogger(__name__)
-logging.getLogger(__name__).setLevel(logging.DEBUG)
+logging.getLogger(__name__).setLevel(logging.INFO)
 logging.getLogger(__name__).addHandler(logging.StreamHandler())
 logging.getLogger(__name__).addHandler(logging.FileHandler("logs/BetaBeard.log"))
 
 
 
 configFile = "BetaBeard.ini"
+configDbFile = "BetaBeard.db"
 param = {}
+paramDb = {}
 
 
 """
@@ -58,9 +60,6 @@ def checkConfig(config):
             param['archive'] = None
 
         param['fullUpdate'] = config.get("BetaBeard", "fullUpdate")
-        param['last_event_id'] = config.get("BetaBeard", "last_event_id")
-        if (param['last_event_id'] == ""):
-            param['last_event_id'] = None
 
     except ConfigParser.NoOptionError as ex:
         logger.error("[BetaBeard] Error in config file : %s", ex)
@@ -73,38 +72,37 @@ def checkConfig(config):
 
 
 
+def loadDb(configToLoad):
+    global paramDb
+
+    if (os.path.exists(configDbFile)):
+        configToLoad.read(configDbFile)
+
+    try:
+        paramDb['last_event_id'] = configToLoad.get("BetaBeard", "last_event_id")
+        if (paramDb['last_event_id'] == ""):
+            paramDb['last_event_id'] = None
+    except ConfigParser.NoOptionError:
+        logger.debug("[BetaBeard] Config file Tech not found. Use default.")
+        paramDb['last_event_id'] = None
+    except ConfigParser.NoSectionError:
+        logger.debug("[BetaBeard] Config file Tech not found. Use default.")
+        configToLoad.add_section("BetaBeard")
+        paramDb['last_event_id'] = None
 
 
 
 
-def createDefault(config):
-    config.add_section('BetaSeries')
-    config.set('BetaSeries','login', "Dev047")
-    config.set('BetaSeries','password', "developer")
 
-    config.add_section('SickBeard')
-    config.set('SickBeard','url', "localhost:8081")
-    config.set('SickBeard','https', "True")
-    config.set('SickBeard','apikey', "")
-    config.set("SickBeard", "location", "")
-    config.set("SickBeard", "lang", "")
-    config.set("SickBeard", "status", "")
-    config.set("SickBeard", "intial", "")
-    config.set("SickBeard", "archive", "")
-
-    config.add_section('BetaBeard')
-    config.set("BetaBeard", "fullUpdate", "True")
-    config.set("BetaBeard", "last_index_id", "")
-
-    logger.debug("[BetaBeard] Default value added in config file.")
-
-
-def updateIni(config):
-    logger.debug("[BetaBeard] Update file %s", configFile)
-    cfgfile = open(configFile,'w')
-    config.write(cfgfile)
+"""
+Update the BetaBeard-tech.ini
+"""
+def updateDb(configToSave):
+    logger.debug("[BetaBeard] Update file %s", configDbFile)
+    cfgfile = open(configDbFile,'w')
+    configToSave.write(cfgfile)
     cfgfile.close()
-    logger.debug("[BetaBeard] File %s updated.", configFile)
+    logger.debug("[BetaBeard] File %s updated.", configDbFile)
 
 
 
@@ -117,14 +115,14 @@ def updateIni(config):
 if __name__ == '__main__':
     # First of all, we need to reed the BetaBeard.ini config file.
     config = ConfigParser.SafeConfigParser()
+    configDb = ConfigParser.SafeConfigParser()
 
     if (os.path.exists(configFile) == False):
-        createDefault(config)
-        updateIni(config);
         logger.error("[BetaBeard] Config file %s not found.", configFile)
         sys.exit(0)
 
     config.read(configFile)
+    loadDb(configDb)
 
     if checkConfig(config) == False:
         sys.exit(0)
@@ -147,10 +145,10 @@ if __name__ == '__main__':
         sys.exit(0)
     logger.info("[BetaBeard] Ping SickBeard successfull.")
 
-    # ----------- retrieve last  event processed in betaseries----------- #
-    if param['last_event_id'] == None:
+    # ----------- If fullUpdate, we retrieve all the current show and add them to sickbear.----------- #
+    if paramDb['last_event_id'] == None:
         logger.debug("[BetaBeard] last_index_id is None")
-        if param['fullUpdate']:
+        if param['fullUpdate'] == True:
             shows = beta.show_list();
             logger.debug("[BetaBeard] shows : %s", shows)
             for show in shows:
@@ -158,13 +156,34 @@ if __name__ == '__main__':
                 success = sickBeard.add_show(show, param['location'],  param['lang'],  param['flatten_folder'],  param['status'],  param['initial'],  param['archive'])
                 if (success == False):
                     logger.error("[BetaBeard] Can't add show %s to sickbeard.", show)
+
+        # ----------- retrieve last  event processed in betaseries----------- #
         param['last_event_id'], emptyList = beta.timeline_since(None)
-        if (param['last_event_id'] != None):
-            logger.info("[BetaBeard] update config with last_event_id=%s", param['last_event_id'])
-            config.set("BetaBeard", "last_event_id", param['last_event_id']);
-            updateIni(config);
-        else:
-            logger.info("[BetaBeard] Can't update config file because last_event_id is null")
+    else:
+        param['last_event_id'], events = beta.timeline_since(paramDb['last_event_id'])
+        logger.debug("[BetaBeard] Processing timeline : %s", events)
+        for event in events:
+            logger.debug("[BetaBeard] Event : %s", event)
+            if (event['type'] == 'add_serie'):
+                logger.info("[BetaBeard] Add Show to sickbeard : %s", event['ref_id'])
+            elif (event['type'] == 'del_serie'):
+                logger.info("[BetaBeard] Delete Show from sickbeard : %s", event['ref_id'])
+            elif (event['type'] == 'archive'):
+                logger.info("[BetaBeard] Archive Show on sickbeard : %s", event['ref_id'])
+            elif (event['type'] == 'unarchive'):
+                logger.info("[BetaBeard] UnArchive Show on sickbeard : %s", event['ref_id'])
+
+
+
+
+
+    # ----------- Update Last_event_id in config file.----------- #
+    if (param['last_event_id'] != None):
+        logger.info("[BetaBeard] update config with last_event_id=%s", param['last_event_id'])
+        configDb.set("BetaBeard", "last_event_id", str(param['last_event_id']));
+        updateDb(configDb);
+    else:
+        logger.info("[BetaBeard] Can't update config file because last_event_id is null")
 
 
 
