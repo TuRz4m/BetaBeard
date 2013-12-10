@@ -213,7 +213,7 @@ class BetaSerieAPI:
     We do it here, because the 'since_id' is funny...
     return last_id,events
     """
-    def timeline_since(self, since, idUser=None):
+    def timeline_since(self, since=None, idUser=None):
         timeline = self.timeline(nb=100, idUser=idUser)
 
         if (timeline == None or len(timeline) == 0):
@@ -221,6 +221,9 @@ class BetaSerieAPI:
 
         last_id = timeline[0]['id'];
         events = []
+
+        if (since == None):
+            return last_id, []
 
         while timeline != None and len(timeline) != 0:
             for event in timeline:

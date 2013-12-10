@@ -18,69 +18,49 @@ logging.getLogger(__name__).addHandler(logging.FileHandler("logs/BetaBeard.log")
 
 
 configFile = "BetaBeard.ini"
-login =""
-password =""
-sburl = ""
-scheme = "http"
-apikey = ""
-fullUpdate = True
-location = ""
-lang = ""
-flatten_folder = ""
-status = ""
-initial = ""
-archive = ""
-last_index_id = None
+param = {}
 
+
+"""
+Load the config file & fill all the var.
+"""
 def checkConfig(config):
     try:
-        global login
-        global password
-        global sburl
-        global scheme
-        global apikey
-        global fullUpdate
-        global location
-        global lang
-        global flatten_folder
-        global status
-        global initial
-        global archive
-        global last_index_id
+        global param
 
-        login = config.get("BetaSeries", "login")
-        password = config.get("BetaSeries", "password")
+        param['login'] = config.get("BetaSeries", "login")
+        param['password'] = config.get("BetaSeries", "password")
 
-        sburl = config.get("SickBeard", "url")
+        param['sburl'] = config.get("SickBeard", "url")
         if (config.getboolean("SickBeard", "https")):
-            scheme = "https"
+            param['scheme'] = "https"
 
-        apikey = config.get("SickBeard", "apikey")
+        param['apikey'] = config.get("SickBeard", "apikey")
 
 
-        location = config.get("SickBeard", "location")
-        if (location == ""):
-            location = None
-        lang = config.get("SickBeard", "lang")
-        if (lang == ""):
-            lang = None
-        flatten_folder = config.get("SickBeard", "flatten_folder")
-        if (flatten_folder == ""):
-            flatten_folder = None
-        status = config.get("SickBeard", "status")
-        if (status == ""):
-            status = None
-        initial = config.get("SickBeard", "initial")
-        if (initial == ""):
-            initial = None
-        archive = config.get("SickBeard", "archive")
-        if (archive == ""):
-            archive = None
+        param['location'] = config.get("SickBeard", "location")
+        if (param['location'] == ""):
+            param['location'] = None
+        param['lang'] = config.get("SickBeard", "lang")
+        if (param['lang'] == ""):
+            param['lang'] = None
+        param['flatten_folder'] = config.get("SickBeard", "flatten_folder")
+        if (param['flatten_folder'] == ""):
+            param['flatten_folder'] = None
+        param['status'] = config.get("SickBeard", "status")
+        if (param['status'] == ""):
+            param['status'] = None
+        param['initial'] = config.get("SickBeard", "initial")
+        if (param['initial'] == ""):
+            param['initial'] = None
+        param['archive'] = config.get("SickBeard", "archive")
+        if (param['archive'] == ""):
+            param['archive'] = None
 
-        fullUpdate = config.get("BetaBeard", "fullUpdate")
-        last_index_id = config.get("BetaBeard", "last_index_id")
-        if (last_index_id == ""):
-            last_index_id = None
+        param['fullUpdate'] = config.get("BetaBeard", "fullUpdate")
+        param['last_event_id'] = config.get("BetaBeard", "last_event_id")
+        if (param['last_event_id'] == ""):
+            param['last_event_id'] = None
 
     except ConfigParser.NoOptionError as ex:
         logger.error("[BetaBeard] Error in config file : %s", ex)
@@ -151,7 +131,7 @@ if __name__ == '__main__':
 
     # ----------- Init BetaSeries ----------- #
     try:
-        beta = BetaSerieAPI(login, password)
+        beta = BetaSerieAPI(param['login'], param['password'])
     except BadLoginException as ex:
         logger.error("[BetaBeard] can't log into BetaSeries.com : %s", ex.value['text'])
         sys.exit(0)
@@ -159,24 +139,34 @@ if __name__ == '__main__':
     logger.info("[BetaBeard] Login successfull.")
     # ----------- Init SickBeard ----------- #
 
-    sickBeard = SickBeardAPI(sburl, scheme, apikey)
+    sickBeard = SickBeardAPI(param['sburl'], param['scheme'], param['apikey'])
 
     # ----------- Test SickBeard ----------- #
     if (sickBeard.ping() == False):
-        logger.error("[BetaBeard] Can't ping SickBeard on url : %s://%s with apikey = %s",scheme, config.get("SickBeard", "url"), config.get("SickBeard", "apikey"))
+        logger.error("[BetaBeard] Can't ping SickBeard on url : %s://%s with apikey = %s",param['scheme'], param['sburl'], param['apikey'])
         sys.exit(0)
     logger.info("[BetaBeard] Ping SickBeard successfull.")
 
     # ----------- retrieve last  event processed in betaseries----------- #
-    if config.get("BetaBeard", "last_index_id") == "":
+    if param['last_event_id'] == None:
         logger.debug("[BetaBeard] last_index_id is None")
-        if config.get("BetaBeard", "fullUpdate"):
+        if param['fullUpdate']:
             shows = beta.show_list();
             logger.debug("[BetaBeard] shows : %s", shows)
             for show in shows:
                 logger.info("[BetaBeard] Add show in SickBeard : %s", show)
-                success = sickBeard.add_show(show, location, lang, flatten_folder, status, initial, archive)
+                success = sickBeard.add_show(show, param['location'],  param['lang'],  param['flatten_folder'],  param['status'],  param['initial'],  param['archive'])
                 if (success == False):
                     logger.error("[BetaBeard] Can't add show %s to sickbeard.", show)
+        param['last_event_id'], emptyList = beta.timeline_since(None)
+        if (param['last_event_id'] != None):
+            logger.info("[BetaBeard] update config with last_event_id=%s", param['last_event_id'])
+            config.set("BetaBeard", "last_event_id", param['last_event_id']);
+            updateIni(config);
+        else:
+            logger.info("[BetaBeard] Can't update config file because last_event_id is null")
+
+
+
 
 
