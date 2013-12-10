@@ -172,7 +172,7 @@ class BetaSerieAPI:
             return True
 
     """
-    Return the list of all the show (thetvdb_id) for the user.
+    Return the list of all the show (thetvdb_id, title) for the user.
     """
     def show_list(self):
         params = [('id', self.idUser)]
@@ -182,7 +182,7 @@ class BetaSerieAPI:
             for show in memberinfo['member']['shows']:
                 logger.debug("BetaSerieAPI::show_list() :  Show(%s) : %s", show['id'], show['title'])
                 if show['status'] != 'Ended' and show['user']['archived'] == False:
-                    activeShows.append(show['thetvdb_id'])
+                    activeShows.append((show['thetvdb_id'], show['title']))
                     logger.debug("BetaSerieAPI::show_list() :  Show(%s) : %s Added.", show['id'], show['title'])
             return activeShows
         else:

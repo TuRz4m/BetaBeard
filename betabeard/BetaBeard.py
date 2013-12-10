@@ -59,7 +59,9 @@ def checkConfig(config):
         if (param['archive'] == ""):
             param['archive'] = None
 
-        param['fullUpdate'] = config.get("BetaBeard", "fullUpdate")
+        param['fullUpdate'] = config.getboolean("BetaBeard", "fullUpdate")
+        param['checkTimeLine'] = config.getboolean("BetaBeard", "checkTimeLine")
+        param['demoMode'] = config.getboolean("BetaBeard", "demoMode")
 
     except ConfigParser.NoOptionError as ex:
         logger.error("[BetaBeard] Error in config file : %s", ex)
@@ -151,27 +153,41 @@ if __name__ == '__main__':
         if param['fullUpdate'] == True:
             shows = beta.show_list();
             logger.debug("[BetaBeard] shows : %s", shows)
+            logger.info("[BetaBeard] Start processing shows.")
             for show in shows:
-                logger.info("[BetaBeard] Add show in SickBeard : %s", show)
-                success = sickBeard.add_show(show, param['location'],  param['lang'],  param['flatten_folder'],  param['status'],  param['initial'],  param['archive'])
-                if (success == False):
-                    logger.error("[BetaBeard] Can't add show %s to sickbeard.", show)
+                logger.info("[BetaBeard] Add show in SickBeard : %s (%s)", show[1], show[0])
+                if (param['demoMode'] == False):
+                    success = sickBeard.add_show(show[0], param['location'],  param['lang'],  param['flatten_folder'],  param['status'],  param['initial'],  param['archive'])
+                    if (success == False):
+                        logger.error("[BetaBeard] Can't add show %s (%s) to sickbeard.", show[1], show[0])
 
         # ----------- retrieve last  event processed in betaseries----------- #
         param['last_event_id'], emptyList = beta.timeline_since(None)
-    else:
+    elif param['checkTimeLine']:
+        logger.info("[BetaBeard] Start processing timeline.")
         param['last_event_id'], events = beta.timeline_since(paramDb['last_event_id'])
         logger.debug("[BetaBeard] Processing timeline : %s", events)
-        for event in events:
-            logger.debug("[BetaBeard] Event : %s", event)
-            if (event['type'] == 'add_serie'):
-                logger.info("[BetaBeard] Add Show to sickbeard : %s", event['ref_id'])
-            elif (event['type'] == 'del_serie'):
-                logger.info("[BetaBeard] Delete Show from sickbeard : %s", event['ref_id'])
-            elif (event['type'] == 'archive'):
-                logger.info("[BetaBeard] Archive Show on sickbeard : %s", event['ref_id'])
-            elif (event['type'] == 'unarchive'):
-                logger.info("[BetaBeard] UnArchive Show on sickbeard : %s", event['ref_id'])
+        if (events != None):
+            for event in events:
+                logger.debug("[BetaBeard] Event : %s", event)
+
+
+                if (event['type'] == 'add_serie'):
+                    betaid = str(event['ref_id']);
+                    tvdbid, title = beta.shows_tvdbid(betaid)
+                    logger.info("[BetaBeard] Add Show to sickbeard : %s (%s)", title, tvdbid)
+                elif (event['type'] == 'del_serie'):
+                    betaid = str(event['ref_id']);
+                    tvdbid, title = beta.shows_tvdbid(betaid)
+                    logger.info("[BetaBeard] Delete Show from sickbeard :  %s (%s)", title, tvdbid)
+                elif (event['type'] == 'archive'):
+                    betaid = str(event['ref_id']);
+                    tvdbid, title = beta.shows_tvdbid(betaid)
+                    logger.info("[BetaBeard] Archive Show on sickbeard : %s (%s)", title, tvdbid)
+                elif (event['type'] == 'unarchive'):
+                    betaid = str(event['ref_id']);
+                    tvdbid, title = beta.shows_tvdbid(betaid)
+                    logger.info("[BetaBeard] UnArchive Show on sickbeard :  %s (%s)", title, tvdbid)
 
 
 
@@ -179,11 +195,11 @@ if __name__ == '__main__':
 
     # ----------- Update Last_event_id in config file.----------- #
     if (param['last_event_id'] != None):
-        logger.info("[BetaBeard] update config with last_event_id=%s", param['last_event_id'])
+        logger.debug("[BetaBeard] update config with last_event_id=%s", param['last_event_id'])
         configDb.set("BetaBeard", "last_event_id", str(param['last_event_id']));
         updateDb(configDb);
     else:
-        logger.info("[BetaBeard] Can't update config file because last_event_id is null")
+        logger.debug("[BetaBeard] Can't update config file because last_event_id is null")
 
 
 
