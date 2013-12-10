@@ -8,6 +8,7 @@ Created on 05 dec. 2013
 from unittest import TestCase, TestSuite, TestLoader, TextTestRunner
 
 from api.APIUtils import SickBeardAPI
+import time
 
 
 class SickBeardAPITestCase(TestCase):
@@ -29,12 +30,16 @@ class SickBeardAPITestCase(TestCase):
         self.assertFalse(self.sickBeardAPI.pause_show(0, 50))
 
     def test_workflow(self):
-        showId = 0
+        showId = 268906
         self.assertTrue(self.sickBeardAPI.add_show(showId))
+        # need to sleep, otherwise, the show is not added.
+        time.sleep(5)
         self.assertTrue(self.sickBeardAPI.pause_show(showId, 1))
-        self.assertFalse(self.sickBeardAPI.pause_show(showId, 1))
+        self.assertTrue(self.sickBeardAPI.pause_show(showId, 1))
         self.assertTrue(self.sickBeardAPI.pause_show(showId, 0))
-        self.assertFalse(self.sickBeardAPI.pause_show(showId, 0))
+        self.assertTrue(self.sickBeardAPI.pause_show(showId, 0))
+
+        time.sleep(5)
         self.assertTrue(self.sickBeardAPI.del_show(showId))
         self.assertFalse(self.sickBeardAPI.pause_show(showId, 1))
 

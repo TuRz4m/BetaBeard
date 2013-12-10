@@ -321,7 +321,7 @@ class SickBeardAPI:
     tvdbid = Id on thetvdb.
     """
     def del_show(self, tvdbid):
-        params = [('cmd', 'show.remove'),
+        params = [('cmd', 'show.delete'),
                    ('tvdbid', tvdbid)]
         data = self.builder.call("/" , params)
         logger.debug("SickBeardAPI::del_show(%s) : %s", tvdbid, data)
@@ -339,8 +339,8 @@ class SickBeardAPI:
     pause = 0: Not paused, 1: paused.
     """
     def pause_show(self, tvdbid, pause):
-        params = [('cmd', 'show.remove'),
-                   ('tvdbid', tvdbid)
+        params = [('cmd', 'show.pause'),
+                   ('tvdbid', tvdbid),
                    ('pause', pause)]
         data = self.builder.call("/" , params)
         logger.debug("SickBeardAPI::pause_show(%s, %s) : %s", tvdbid, pause, data)
@@ -351,3 +351,4 @@ class SickBeardAPI:
             logger.error("SickBeard : Can't pause/unpause show %s. (%s)", tvdbid, data['message'])
         else:
             logger.error("SickBeard : Can't pause/unpause show %s.", tvdbid)
+        return False
