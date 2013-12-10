@@ -280,6 +280,25 @@ class SickBeardAPI:
         logger.debug("SickBeardAPI::__init__(%s,%s,%s,%s)", url, scheme, key, user_agent)
 
     """
+    Just ping sickbeard.
+    Return true if sickbeard answer.
+    """
+    def ping(self):
+        params = [('cmd', 'sb.ping')]
+        data = self.builder.call("/" , params)
+
+        logger.debug("SickBeardAPI::ping() : %s",  data)
+
+        if (data != None  and data['result'] == 'success'):
+            return True
+        elif (data != None):
+            logger.error("SickBeard : Can't ping SickBeard. (%s)", data['message'])
+        else:
+            logger.error("SickBeard : Can't ping SickBeard.")
+
+        return False
+
+    """
     Add a show on sickbeard.
     tvdbid unique show id
     location path to existing folder to store show
