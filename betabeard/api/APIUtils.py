@@ -145,7 +145,7 @@ class BetaSerieAPI:
             raise BadLoginException(userAuth['errors'][0])
 
     """
-    Return the tvdbid of a show.
+    Return the tvdbid of a show && title of this show.
     """
     def shows_tvdbid(self, show_id):
         params = [('id', show_id)]
@@ -155,7 +155,7 @@ class BetaSerieAPI:
             return -1
         else:
             logger.debug("BetaSerieAPI::shows_tvdbid(%s) : %s", show_id, tvshow['show']['thetvdb_id'])
-            return tvshow['show']['thetvdb_id']
+            return tvshow['show']['thetvdb_id'], tvshow['show']['title']
 
 
     """

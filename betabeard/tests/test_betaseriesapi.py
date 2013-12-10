@@ -30,7 +30,7 @@ class BetaSerieAPITestCase(TestCase):
 
     def test_shows_tvdbid(self):
         thetvdb_id = 0
-        self.assertEqual(self.betaserieAPI.shows_tvdbid(self.idShow), thetvdb_id)
+        self.assertEqual(self.betaserieAPI.shows_tvdbid(self.idShow)[0], thetvdb_id)
 
 
     def test_show_list(self):
