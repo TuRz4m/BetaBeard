@@ -171,23 +171,51 @@ if __name__ == '__main__':
             for event in events:
                 logger.debug("[BetaBeard] Event : %s", event)
 
-
+                # - ADD SERIE - #
                 if (event['type'] == 'add_serie'):
                     betaid = str(event['ref_id']);
                     tvdbid, title = beta.shows_tvdbid(betaid)
                     logger.info("[BetaBeard] Add Show to sickbeard : %s (%s)", title, tvdbid)
+
+                    if (param['demoMode'] == False):
+                        success = sickBeard.add_show(tvdbid, param['location'],  param['lang'],  param['flatten_folder'],  param['status'],  param['initial'],  param['archive'])
+                        if (success == False):
+                            logger.error("[BetaBeard] Can't add show %s (%s) to sickbeard.", title, tvdbid)
+
+                # - DELETE SERIE - #
                 elif (event['type'] == 'del_serie'):
                     betaid = str(event['ref_id']);
                     tvdbid, title = beta.shows_tvdbid(betaid)
                     logger.info("[BetaBeard] Delete Show from sickbeard :  %s (%s)", title, tvdbid)
+
+                    if (param['demoMode'] == False):
+                        success =  sickBeard.del_show(tvdbid)
+                        if (success == False):
+                            logger.error("[BetaBeard] Can't delete show %s (%s) from sickbeard.", title, tvdbid)
+
+                # - PAUSE SERIE - #
                 elif (event['type'] == 'archive'):
                     betaid = str(event['ref_id']);
                     tvdbid, title = beta.shows_tvdbid(betaid)
                     logger.info("[BetaBeard] Archive Show on sickbeard : %s (%s)", title, tvdbid)
+
+                    if (param['demoMode'] == False):
+                        success =  sickBeard.pause_show(tvdbid, 1)
+                        if (success == False):
+                            logger.error("[BetaBeard] Can't pause show %s (%s) on sickbeard.", title, tvdbid)
+
+                # - UNPAUSE SERIE - #
                 elif (event['type'] == 'unarchive'):
                     betaid = str(event['ref_id']);
                     tvdbid, title = beta.shows_tvdbid(betaid)
                     logger.info("[BetaBeard] UnArchive Show on sickbeard :  %s (%s)", title, tvdbid)
+
+                    if (param['demoMode'] == False):
+                        success =  sickBeard.pause_show(tvdbid, 0)
+                        if (success == False):
+                            logger.error("[BetaBeard] Can't unpause show %s (%s) on sickbeard.", title, tvdbid)
+
+        logger.info("[BetaBeard] Timeline processing done.")
 
 
 
