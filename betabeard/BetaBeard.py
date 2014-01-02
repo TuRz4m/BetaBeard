@@ -133,7 +133,7 @@ if __name__ == '__main__':
     try:
         beta = BetaSerieAPI(param['login'], param['password'])
     except BadLoginException as ex:
-        logger.error("[BetaBeard] can't log into BetaSeries.com : %s", ex.value['text'])
+        logger.error("[BetaBeard] can't log into BetaSeries.com : %s", ex.value)
         sys.exit(0)
 
     logger.info("[BetaBeard] Login successfull.")

@@ -136,13 +136,15 @@ class BetaSerieAPI:
         logger.debug("BetaSerieAPI::auth(%s,%s) : Try auth...", login, hash_pass)
         params = [('login', login), ('password', hash_pass)]
         userAuth = self.builder.call("/members/auth", params, True)
-        if (len(userAuth['errors']) == 0):
+        if (userAuth != None and len(userAuth['errors']) == 0):
             self.idUser = userAuth['user']['id']
             self.token = userAuth['token']
             logger.debug("BetaSerieAPI::auth(%s,%s) : Successfull.", login, hash_pass)
         else:
             logger.error("BetaSerieAPI::auth(%s,%s) : Fail.", login, hash_pass)
-            raise BadLoginException(userAuth['errors'][0])
+            if userAuth == None:
+                raise BadLoginException("Can't connect to BetaSeries.com")
+            raise BadLoginException(userAuth['errors'][0]['text'])
 
     """
     Return the tvdbid of a show && title of this show.
