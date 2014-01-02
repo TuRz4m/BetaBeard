@@ -332,15 +332,16 @@ class SickBeardAPI:
             params.append([('archive', archive)])
         data = self.builder.call("/" , params)
         logger.debug("SickBeardAPI::add_show(%s,%s,%s,%s,%s,%s,%s) : %s", tvdbid, location, lang, flatten_folders, status, initial, archive, data)
-
+        message = ''
         if (data != None  and data['result'] == 'success'):
-            return True
+            return True, message
         elif (data != None):
             logger.error("SickBeard : Can't add show %s. (%s)", tvdbid, data['message'])
+            message = data['message']
         else:
             logger.error("SickBeard : Can't add show %s.", tvdbid)
 
-        return False
+        return False, message
 
     """
     Delete the show on SickBeard.
@@ -351,13 +352,17 @@ class SickBeardAPI:
                    ('tvdbid', tvdbid)]
         data = self.builder.call("/" , params)
         logger.debug("SickBeardAPI::del_show(%s) : %s", tvdbid, data)
+        message = ''
 
         if (data != None  and data['result'] == 'success'):
-            return True
+            return True, message
         elif (data != None):
             logger.error("SickBeard : Can't delete show %s. (%s)", tvdbid, data['message'])
+            message = data['message']
         else:
             logger.error("SickBeard : Can't delete show %s.", tvdbid)
+
+        return False, message
 
     """
     Pause the show on SickBeard.
@@ -370,11 +375,13 @@ class SickBeardAPI:
                    ('pause', pause)]
         data = self.builder.call("/" , params)
         logger.debug("SickBeardAPI::pause_show(%s, %s) : %s", tvdbid, pause, data)
+        message = ''
 
         if (data != None  and data['result'] == 'success'):
-            return True
+            return True, message
         elif (data != None):
             logger.error("SickBeard : Can't pause/unpause show %s. (%s)", tvdbid, data['message'])
+            message = data['message']
         else:
             logger.error("SickBeard : Can't pause/unpause show %s.", tvdbid)
-        return False
+        return False, message

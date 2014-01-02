@@ -157,9 +157,9 @@ if __name__ == '__main__':
             for show in shows:
                 logger.info("[BetaBeard] Add show in SickBeard : %s (%s)", show[1], show[0])
                 if (param['demoMode'] == False):
-                    success = sickBeard.add_show(show[0], param['location'],  param['lang'],  param['flatten_folder'],  param['status'],  param['initial'],  param['archive'])
+                    success,message = sickBeard.add_show(show[0], param['location'],  param['lang'],  param['flatten_folder'],  param['status'],  param['initial'],  param['archive'])
                     if (success == False):
-                        logger.error("[BetaBeard] Can't add show %s (%s) to sickbeard.", show[1], show[0])
+                        logger.error("[BetaBeard] Can't add show %s (%s) to sickbeard : %s", show[1], show[0], message)
 
         # ----------- retrieve last  event processed in betaseries----------- #
         param['last_event_id'], emptyList = beta.timeline_since(None)
@@ -178,9 +178,9 @@ if __name__ == '__main__':
                     logger.info("[BetaBeard] Add Show to sickbeard : %s (%s)", title, tvdbid)
 
                     if (param['demoMode'] == False):
-                        success = sickBeard.add_show(tvdbid, param['location'],  param['lang'],  param['flatten_folder'],  param['status'],  param['initial'],  param['archive'])
+                        success,message = sickBeard.add_show(tvdbid, param['location'],  param['lang'],  param['flatten_folder'],  param['status'],  param['initial'],  param['archive'])
                         if (success == False):
-                            logger.error("[BetaBeard] Can't add show %s (%s) to sickbeard.", title, tvdbid)
+                            logger.error("[BetaBeard] Can't add show %s (%s) to sickbeard : %s.", title, tvdbid, message)
 
                 # - DELETE SERIE - #
                 elif (event['type'] == 'del_serie'):
@@ -189,9 +189,9 @@ if __name__ == '__main__':
                     logger.info("[BetaBeard] Delete Show from sickbeard :  %s (%s)", title, tvdbid)
 
                     if (param['demoMode'] == False):
-                        success =  sickBeard.del_show(tvdbid)
+                        success, message =  sickBeard.del_show(tvdbid)
                         if (success == False):
-                            logger.error("[BetaBeard] Can't delete show %s (%s) from sickbeard.", title, tvdbid)
+                            logger.error("[BetaBeard] Can't delete show %s (%s) from sickbeard : %s.", title, tvdbid, message)
 
                 # - PAUSE SERIE - #
                 elif (event['type'] == 'archive'):
@@ -200,9 +200,9 @@ if __name__ == '__main__':
                     logger.info("[BetaBeard] Archive Show on sickbeard : %s (%s)", title, tvdbid)
 
                     if (param['demoMode'] == False):
-                        success =  sickBeard.pause_show(tvdbid, 1)
+                        success, message =  sickBeard.pause_show(tvdbid, 1)
                         if (success == False):
-                            logger.error("[BetaBeard] Can't pause show %s (%s) on sickbeard.", title, tvdbid)
+                            logger.error("[BetaBeard] Can't pause show %s (%s) on sickbeard : %s.", title, tvdbid, message)
 
                 # - UNPAUSE SERIE - #
                 elif (event['type'] == 'unarchive'):
@@ -211,9 +211,9 @@ if __name__ == '__main__':
                     logger.info("[BetaBeard] UnArchive Show on sickbeard :  %s (%s)", title, tvdbid)
 
                     if (param['demoMode'] == False):
-                        success =  sickBeard.pause_show(tvdbid, 0)
+                        success, message =  sickBeard.pause_show(tvdbid, 0)
                         if (success == False):
-                            logger.error("[BetaBeard] Can't unpause show %s (%s) on sickbeard.", title, tvdbid)
+                            logger.error("[BetaBeard] Can't unpause show %s (%s) on sickbeard : %s.", title, tvdbid, message)
 
         logger.info("[BetaBeard] Timeline processing done.")
 
